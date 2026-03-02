@@ -197,8 +197,14 @@
             document.getElementById('roleModal').classList.remove('flex');
             
             // Si no estaba logueado, lo metemos como anónimo para que pueda leer la DB
-            if (!user) {
-                await signInAnonymously(auth);
+            try {
+                if (!auth.currentUser) {
+                    document.getElementById('loadingScreen').classList.remove('hidden');
+                    await signInAnonymously(auth);
+                    document.getElementById('loadingScreen').classList.add('hidden');
+                }
+            } catch (e) {
+                console.error("Error login anónimo", e);
             }
             
             isReadOnly = true;
@@ -243,8 +249,14 @@
         async function iniciarSincronizacion() {
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', calendarId);
             
-            // Creamos el documento por si no existe aún
-            await setDoc(docRef, { createdAt: Date.now() }, { merge: true });
+            // Creamos el documento por si no existe aún (SOLO SI ES TÉCNICO)
+            if (!isReadOnly) {
+                try {
+                    await setDoc(docRef, { createdAt: Date.now() }, { merge: true });
+                } catch (e) {
+                    console.log("No se requiere crear el documento base.");
+                }
+            }
 
             onSnapshot(docRef, (snap) => {
                 if (snap.exists()) {
@@ -255,7 +267,12 @@
                     document.getElementById('name1').value = names.n1;
                     document.getElementById('name2').value = names.n2;
                     renderizarCalendario();
+                } else {
+                    // Si el documento aún no existe (porque el técnico no ha entrado nunca)
+                    renderizarCalendario();
                 }
+            }, (error) => {
+                console.error("Error de sincronización:", error);
             });
         }
 
