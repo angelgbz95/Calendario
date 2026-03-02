@@ -348,6 +348,7 @@
                 dayEl.innerHTML = `<span class="relative z-10">${d}</span>`;
                 
                 // Lógica de fechas (Pasado y Presente)
+                const isPast = false;
                 const cellDate = new Date(year, m, d);
                 const isPast = cellDate < today;
                 const isToday = cellDate.getTime() === today.getTime();
@@ -398,3 +399,4 @@
     </script>
 </body>
 </html>
+
