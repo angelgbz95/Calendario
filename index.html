@@ -33,20 +33,33 @@
     <div id="roleModal" class="fixed inset-0 bg-slate-900/90 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
             <h2 class="text-2xl font-bold text-slate-800 mb-2">Acceso al Calendario</h2>
-            <p class="text-slate-500 mb-8 text-sm">Elige tu perfil para sincronizar en vivo.</p>
+            <p class="text-slate-500 mb-6 text-sm">Ingresa tus credenciales para editar.</p>
             
             <div class="space-y-4">
-                <button onclick="ingresarComoTecnico()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center justify-center gap-3 shadow-md">
-                    <svg class="w-6 h-6 bg-white rounded-full p-1" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                    Técnico (Ingresar con Google)
-                </button>
+                
+                <!-- Formulario de Ingreso Técnico -->
+                <div id="loginForm" class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left mb-6">
+                    <div class="mb-3">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Correo Corporativo</label>
+                        <input type="email" id="emailInput" class="w-full bg-white border border-slate-300 text-slate-900 rounded-lg p-2.5 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="usuario@empresa.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Contraseña</label>
+                        <input type="password" id="passwordInput" class="w-full bg-white border border-slate-300 text-slate-900 rounded-lg p-2.5 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="••••••••">
+                    </div>
+                    <p id="loginError" class="text-red-500 text-xs hidden font-medium mb-3"></p>
+                    <button onclick="ingresarComoTecnico()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition shadow-md">
+                        Ingresar como Técnico
+                    </button>
+                </div>
+
                 <div class="relative flex py-2 items-center">
                     <div class="flex-grow border-t border-slate-200"></div>
                     <span class="flex-shrink-0 mx-4 text-slate-400 text-xs uppercase">Opciones de vista</span>
                     <div class="flex-grow border-t border-slate-200"></div>
                 </div>
-                <button onclick="ingresarComoCoordinador()" class="w-full bg-slate-100 text-slate-700 py-4 rounded-xl font-bold hover:bg-slate-200 transition flex items-center justify-center gap-3 border border-slate-300">
-                    👁️ Coordinador (Solo Lectura)
+                <button onclick="ingresarComoCoordinador()" class="w-full bg-white text-slate-700 py-3 rounded-lg font-bold hover:bg-slate-50 transition flex items-center justify-center gap-3 border border-slate-300">
+                    👁️ Soy Coordinador (Solo Lectura)
                 </button>
             </div>
         </div>
@@ -62,7 +75,7 @@
                     </h1>
                     <div class="flex items-center gap-2 mt-1">
                         <div id="syncStatus" class="w-2 h-2 bg-slate-300 rounded-full animate-pulse transition-colors duration-300"></div>
-                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Iniciando... <span class="text-slate-300 ml-1 font-mono text-[10px]">v5.0 Limpio</span></p>
+                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Iniciando... <span class="text-slate-300 ml-1 font-mono text-[10px]">v6.0 Auth Correo</span></p>
                     </div>
                 </div>
                 <div class="no-print flex flex-wrap gap-2">
@@ -102,7 +115,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // =========================================================================
         // CONFIGURACIÓN EXACTA
@@ -162,10 +175,31 @@
 
         // FUNCIONES DE LOS BOTONES DEL MODAL
         window.ingresarComoTecnico = () => {
-            const provider = new GoogleAuthProvider();
-            signInWithPopup(auth, provider).catch((error) => {
+            const email = document.getElementById('emailInput').value.trim();
+            const pass = document.getElementById('passwordInput').value.trim();
+            const errorEl = document.getElementById('loginError');
+            
+            if(!email || !pass) {
+                errorEl.innerText = "Por favor, ingresa tu correo y contraseña.";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('loadingScreen').classList.remove('hidden');
+            
+            signInWithEmailAndPassword(auth, email, pass).catch((error) => {
+                document.getElementById('loadingScreen').classList.add('hidden');
                 console.error("Error Auth:", error);
-                alert(`Error al iniciar sesión: ${error.message}`);
+                errorEl.classList.remove('hidden');
+                
+                // Mensajes de error amigables
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    errorEl.innerText = "El correo o la contraseña son incorrectos.";
+                } else if (error.code === 'auth/invalid-email') {
+                    errorEl.innerText = "El formato del correo no es válido.";
+                } else {
+                    errorEl.innerText = `Error: ${error.message}`;
+                }
             });
         };
 
@@ -209,7 +243,10 @@
                 document.getElementById('name1').readOnly = false;
                 document.getElementById('name2').readOnly = false;
                 
-                const nombreTecnico = auth.currentUser.displayName || "Técnico";
+                // Tratar de sacar el nombre del correo (ej: angel@empresa.com -> angel)
+                const userEmail = auth.currentUser.email || "";
+                const nombreTecnico = auth.currentUser.displayName || userEmail.split('@')[0] || "Técnico";
+                
                 document.getElementById('modoTexto').innerText = `Edición Activa (${nombreTecnico})`;
                 document.getElementById('modoTexto').classList.add('text-indigo-600', 'font-bold');
                 document.getElementById('syncStatus').classList.replace('bg-slate-300', 'bg-indigo-500');
