@@ -142,14 +142,15 @@
         // 1. Define aquí el PIN de seguridad para que tú y Maxi puedan editar.
         const PIN_TECNICO = "1234"; 
 
-        // 2. Reemplaza ESTOS VALORES con los de TU proyecto de Firebase (Paso 2 abajo)
+        // 2. CONFIGURACIÓN EXACTA DE TU FIREBASE (Basada en tu captura)
         const MI_FIREBASE_CONFIG = {
-            apiKey: "TU_API_KEY",
-            authDomain: "TU_PROYECTO.firebaseapp.com",
-            projectId: "TU_PROYECTO",
-            storageBucket: "TU_PROYECTO.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef"
+            apiKey: "AIzaSyCz6SMcNXlwRDL7PJPR2RukoFIHaavNBCk",
+            authDomain: "calendarioguardias-333b7.firebaseapp.com",
+            projectId: "calendarioguardias-333b7",
+            storageBucket: "calendarioguardias-333b7.firebasestorage.app",
+            messagingSenderId: "207523446394",
+            appId: "1:207523446394:web:3e84b85139170a6dbe45c3",
+            measurementId: "G-FNCLJJ5Q4Y"
         };
         // ==========================================
 
@@ -204,7 +205,7 @@
         async function initServer() {
             const isLocalCanvas = typeof __firebase_config !== 'undefined';
             let configToUse = isLocalCanvas ? JSON.parse(__firebase_config) : MI_FIREBASE_CONFIG;
-            appId = typeof __app_id !== 'undefined' ? __app_id : 'calendario-guardias-app';
+            appId = isLocalCanvas && typeof __app_id !== 'undefined' ? __app_id : 'calendarioguardias-333b7'; // Usar el ProjectID de Firebase como ID
 
             if (!isLocalCanvas && configToUse.apiKey === "TU_API_KEY") {
                 document.getElementById('setupModal').classList.remove('hidden');
