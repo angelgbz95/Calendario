@@ -77,7 +77,7 @@
                     </h1>
                     <div class="flex items-center gap-2 mt-1">
                         <div id="syncStatus" class="w-2 h-2 bg-slate-300 rounded-full animate-pulse transition-colors duration-300"></div>
-                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Iniciando... <span class="text-slate-300 ml-1 font-mono text-[10px]">v7.0 Historial</span></p>
+                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Iniciando... <span class="text-slate-300 ml-1 font-mono text-[10px]">v7.1 Fix DB</span></p>
                     </div>
                 </div>
                 <div class="no-print flex flex-wrap gap-2">
@@ -355,9 +355,11 @@
                 dayEl.onclick = () => {
                     if (isReadOnly || isPast) return; // Si es solo lectura o un día pasado, no hace nada
                     
-                    // Solo 3 estados ahora (0: Vacío, 1: Técnico 1, 2: Técnico 2)
+                    // Incrementamos el estado del día (0 -> 1 -> 2 -> 0)
                     guards[key] = ((guards[key] || 0) + 1) % 3;
-                    if (guards[key] === 0) delete guards[key];
+                    
+                    // IMPORTANTE: Ya no borramos la llave. 
+                    // Al guardarla como 0, le decimos explícitamente a Firebase que sobreescriba el color anterior y lo deje en blanco.
                     
                     aplicarEstilo(dayEl, guards[key] || 0, isPast, isToday);
                     window.guardarEnNube();
