@@ -68,7 +68,7 @@
                     </h1>
                     <div class="flex items-center gap-2 mt-1">
                         <div id="syncStatus" class="w-2 h-2 bg-slate-300 rounded-full animate-pulse"></div>
-                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Conectando al servidor... <span class="text-slate-300 ml-1 font-mono text-[10px]">v2.0</span></p>
+                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Conectando al servidor... <span class="text-slate-300 ml-1 font-mono text-[10px]">v2.1</span></p>
                     </div>
                 </div>
                 <div class="no-print flex flex-wrap gap-2">
@@ -124,19 +124,19 @@
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // ==========================================
+        // =========================================================================
         // 🛠️ CONFIGURACIÓN EXACTA DE TU FIREBASE
-        // ==========================================
-        const MI_FIREBASE_CONFIG = {
-            apiKey: "AIzaSyCz6SMcNXlwRDL7PJPR2RukoFIHaavNBCk",
-            authDomain: "calendarioguardias-333b7.firebaseapp.com",
-            projectId: "calendarioguardias-333b7",
-            storageBucket: "calendarioguardias-333b7.firebasestorage.app",
-            messagingSenderId: "207523446394",
-            appId: "1:207523446394:web:3e84b85139170a6dbe45c3",
-            measurementId: "G-FNCLJJ5Q4Y"
-        };
-        // ==========================================
+        // =========================================================================
+        const firebaseConfig = {
+  apiKey: "AIzaSyCz6SMcNXIwRDL7PJPR2RukofIBaavN0Ck",
+  authDomain: "calendarioguardias-333b7.firebaseapp.com",
+  projectId: "calendarioguardias-333b7",
+  storageBucket: "calendarioguardias-333b7.firebasestorage.app",
+  messagingSenderId: "207523446394",
+  appId: "1:207523446394:web:3e84b85139170a6dbe45c3",
+  measurementId: "G-FNCLJJ5Q4Y"
+};
+        // =========================================================================
 
         let guards = {}; let notes = {}; let names = { n1: "ANGEL GASPAR BENITEZ", n2: "MAXIMILIANO AGUIRRE" };
         const year = 2026;
@@ -153,7 +153,7 @@
             } catch (error) {
                 console.error("Error completo de Auth:", error);
                 // Alerta nativa que muestra el código exacto de fallo
-                alert(`⚠️ Error al Iniciar Sesión:\n\nCódigo: ${error.code}\n\nSi el código dice 'auth/unauthorized-domain', agrega 'angelgbz95.github.io' en Dominios Autorizados de Firebase.\nSi dice 'auth/popup-blocked', permite las ventanas emergentes en tu navegador.`);
+                alert(`⚠️ Error al Iniciar Sesión:\n\nCódigo: ${error.code}\n\nSi el código dice 'auth/api-key-not-valid', revisa que hayas pegado bien el apiKey en el código.\nSi dice 'auth/unauthorized-domain', agrega 'angelgbz95.github.io' en Dominios Autorizados de Firebase.\nSi dice 'auth/popup-blocked', permite las ventanas emergentes en tu navegador.`);
             }
         };
 
