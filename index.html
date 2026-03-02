@@ -27,7 +27,7 @@
 </head>
 <body class="bg-slate-100 min-h-screen p-2 md:p-8 font-sans text-slate-900">
 
-    <!-- PANTALLA DE CARGA INICIAL (Bloquea todo hasta que Firebase responda) -->
+    <!-- PANTALLA DE CARGA INICIAL -->
     <div id="loadingScreen" class="fixed inset-0 bg-slate-900 z-[200] flex flex-col items-center justify-center p-4">
         <div class="loader mb-4"></div>
         <h2 class="text-white text-xl font-bold">Conectando al Servidor...</h2>
@@ -67,7 +67,7 @@
                     </h1>
                     <div class="flex items-center gap-2 mt-1">
                         <div id="syncStatus" class="w-2 h-2 bg-slate-300 rounded-full animate-pulse"></div>
-                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Iniciando... <span class="text-slate-300 ml-1 font-mono text-[10px]">v4.0 Definitiva</span></p>
+                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Iniciando... <span class="text-slate-300 ml-1 font-mono text-[10px]">v4.1 Sincronización</span></p>
                     </div>
                 </div>
                 <div class="no-print flex flex-wrap gap-2">
@@ -115,14 +115,14 @@
         </div>
     </div>
 
-    <!-- LOGICA DE SERVIDOR Y APLICACIÓN (Reconstruida) -->
+    <!-- LOGICA DE SERVIDOR Y APLICACIÓN -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // =========================================================================
-        // TU CONFIGURACIÓN EXACTA PROPORCIONADA
+        // CONFIGURACIÓN EXACTA
         // =========================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCz6SMcNXIwRDL7PJPR2RukofIBaavN0Ck",
@@ -143,6 +143,7 @@
         const year = 2026;
         let isReadOnly = true; 
         let activeNoteKey = null;
+        let isSubscribed = false; // Bandera para evitar suscripciones múltiples
 
         // INICIALIZACIÓN PRINCIPAL
         try {
@@ -150,28 +151,29 @@
             db = getFirestore(app);
             auth = getAuth(app);
 
-            // Escuchar el estado del usuario (Firebase lo hace automático)
             onAuthStateChanged(auth, async (u) => {
                 user = u;
-                document.getElementById('loadingScreen').classList.add('hidden'); // Ocultar pantalla negra
+                document.getElementById('loadingScreen').classList.add('hidden');
 
                 if (user) {
                     if (!user.isAnonymous) {
-                        // Ya estaba logueado con Google -> Entra como Técnico directo
+                        // Técnico logueado
                         document.getElementById('roleModal').classList.add('hidden');
                         document.getElementById('roleModal').classList.remove('flex');
                         isReadOnly = false;
                         configurarInterfaz();
                         iniciarSincronizacion();
                     } else {
-                        // Está como anónimo -> Sigue siendo Coordinador, o necesita elegir
-                        // Solo mostramos el modal si aún no elegimos Coordinador
-                        if (document.getElementById('roleModal').classList.contains('hidden') === false) {
-                            // Mostrar opciones
-                        }
+                        // Coordinador logueado (Anónimo)
+                        // Si ya estábamos mostrando el modal, asumimos que acaba de hacer clic.
+                        // Si no, recargamos la interfaz como coordinador por defecto.
+                         if (document.getElementById('roleModal').classList.contains('hidden')) {
+                             isReadOnly = true;
+                             configurarInterfaz();
+                             iniciarSincronizacion();
+                         }
                     }
                 } else {
-                    // No hay nadie logueado en absoluto -> Mostramos menú de selección
                     document.getElementById('roleModal').classList.remove('hidden');
                     document.getElementById('roleModal').classList.add('flex');
                 }
@@ -184,32 +186,31 @@
         // FUNCIONES DE LOS BOTONES DEL MODAL
         window.ingresarComoTecnico = () => {
             const provider = new GoogleAuthProvider();
-            signInWithPopup(auth, provider).then(() => {
-                // El onAuthStateChanged de arriba capturará este cambio automáticamente.
-            }).catch((error) => {
-                console.error("Error completo de Auth:", error);
-                alert(`Error: ${error.message}`);
+            signInWithPopup(auth, provider).catch((error) => {
+                console.error("Error Auth:", error);
+                alert(`Error al iniciar sesión: ${error.message}`);
             });
         };
 
         window.ingresarComoCoordinador = async () => {
             document.getElementById('roleModal').classList.add('hidden');
             document.getElementById('roleModal').classList.remove('flex');
+            document.getElementById('loadingScreen').classList.remove('hidden');
             
-            // Si no estaba logueado, lo metemos como anónimo para que pueda leer la DB
             try {
                 if (!auth.currentUser) {
-                    document.getElementById('loadingScreen').classList.remove('hidden');
                     await signInAnonymously(auth);
-                    document.getElementById('loadingScreen').classList.add('hidden');
                 }
+                // El estado cambiará en onAuthStateChanged, pero forzamos la vista por si acaso
+                isReadOnly = true;
+                configurarInterfaz();
+                iniciarSincronizacion();
             } catch (e) {
                 console.error("Error login anónimo", e);
+                alert("Error al entrar como coordinador.");
+            } finally {
+                document.getElementById('loadingScreen').classList.add('hidden');
             }
-            
-            isReadOnly = true;
-            configurarInterfaz();
-            iniciarSincronizacion();
         };
 
         window.cerrarSesion = async () => {
@@ -243,21 +244,28 @@
             }
             
             document.getElementById('calendarGrid').classList.remove('opacity-50', 'pointer-events-none');
-            renderizarCalendario();
+            // Render inicial (vacío) antes de que lleguen los datos
+            if (document.getElementById('calendarGrid').innerHTML === '') {
+                 renderizarCalendario();
+            }
         }
 
         async function iniciarSincronizacion() {
+            if (isSubscribed || !user) return; // Prevenir múltiples llamadas
+            
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', calendarId);
             
-            // Creamos el documento por si no existe aún (SOLO SI ES TÉCNICO)
+            // Si es técnico, nos aseguramos de que el documento base exista
             if (!isReadOnly) {
                 try {
                     await setDoc(docRef, { createdAt: Date.now() }, { merge: true });
                 } catch (e) {
-                    console.log("No se requiere crear el documento base.");
+                    console.log("No se pudo confirmar doc inicial, continuando...");
                 }
             }
 
+            // Suscribirse a los cambios EN VIVO (Para ambos roles)
+            isSubscribed = true;
             onSnapshot(docRef, (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
@@ -268,11 +276,11 @@
                     document.getElementById('name2').value = names.n2;
                     renderizarCalendario();
                 } else {
-                    // Si el documento aún no existe (porque el técnico no ha entrado nunca)
-                    renderizarCalendario();
+                    console.log("Esperando datos iniciales del técnico...");
                 }
             }, (error) => {
-                console.error("Error de sincronización:", error);
+                console.error("Error de sincronización en vivo:", error);
+                isSubscribed = false; // Permitir reintento si falla
             });
         }
 
