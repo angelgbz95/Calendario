@@ -68,13 +68,10 @@
                     </h1>
                     <div class="flex items-center gap-2 mt-1">
                         <div id="syncStatus" class="w-2 h-2 bg-slate-300 rounded-full animate-pulse"></div>
-                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Conectando al servidor...</p>
+                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Conectando al servidor... <span class="text-slate-300 ml-1 font-mono text-[10px]">v2.0</span></p>
                     </div>
                 </div>
                 <div class="no-print flex flex-wrap gap-2">
-                    <button onclick="copiarEnlaceBase()" class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg hover:bg-indigo-100 transition flex items-center gap-2 font-medium text-sm">
-                        🔗 Copiar Enlace
-                    </button>
                     <button id="btnLogout" onclick="cerrarSesion()" class="hidden bg-rose-50 text-rose-700 border border-rose-200 px-4 py-2 rounded-lg hover:bg-rose-100 transition flex items-center gap-2 font-medium text-sm shadow-sm">
                         🚪 Cerrar Sesión
                     </button>
@@ -151,16 +148,12 @@
         window.ingresarComoTecnico = async () => {
             try {
                 const provider = new GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' }); // Obliga a elegir cuenta
                 await signInWithPopup(auth, provider); 
             } catch (error) {
                 console.error("Error completo de Auth:", error);
-                if (error.code === 'auth/popup-blocked') {
-                    alert("Tu navegador bloqueó la ventana de Google. Por favor, permite las ventanas emergentes (pop-ups) para esta página en la barra de direcciones.");
-                } else if (error.code === 'auth/unauthorized-domain') {
-                    alert("⚠️ DOMINIO NO AUTORIZADO:\nDebes agregar 'angelgbz95.github.io' a la lista de dominios autorizados en Firebase Console (Authentication -> Configuración -> Dominios Autorizados).");
-                } else {
-                    alert("Error al iniciar sesión: " + error.message);
-                }
+                // Alerta nativa que muestra el código exacto de fallo
+                alert(`⚠️ Error al Iniciar Sesión:\n\nCódigo: ${error.code}\n\nSi el código dice 'auth/unauthorized-domain', agrega 'angelgbz95.github.io' en Dominios Autorizados de Firebase.\nSi dice 'auth/popup-blocked', permite las ventanas emergentes en tu navegador.`);
             }
         };
 
@@ -174,7 +167,7 @@
         window.cerrarSesion = async () => {
             try {
                 await signOut(auth);
-                window.location.reload(); // Recarga para volver al menú de roles limpio
+                window.location.reload(); 
             } catch (error) {
                 console.error("Error al cerrar sesión", error);
             }
@@ -198,7 +191,6 @@
                 document.getElementById('btnGuardarNota').classList.remove('hidden');
                 document.getElementById('noteInput').readOnly = false;
                 
-                // Mostrar nombre del usuario logueado en la UI
                 const nombreTecnico = auth.currentUser.displayName || "Técnico";
                 document.getElementById('modoTexto').innerText = `Modo Edición Activo (${nombreTecnico})`;
                 document.getElementById('modoTexto').classList.add('text-indigo-600', 'font-bold');
@@ -224,7 +216,6 @@
             db = getFirestore(app);
             auth = getAuth(app);
 
-            // Regla estricta: loguear primero (anónimo temporalmente hasta que elijan)
             if (isLocalCanvas && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                 await signInWithCustomToken(auth, __initial_auth_token);
             } else {
@@ -235,14 +226,10 @@
                 user = u;
                 if (user) {
                     if (!user.isAnonymous) {
-                        // El usuario YA inició sesión con Google. Entra directo como Técnico.
                         document.getElementById('roleModal').classList.add('hidden');
                         isReadOnly = false;
                         configurarInterfaz();
                         setupSync();
-                    } else {
-                        // El usuario es anónimo. Se queda viendo el modal para elegir Rol.
-                        // (Si elige Coordinador, llama a ingresarComoCoordinador manual)
                     }
                 }
             });
@@ -254,17 +241,15 @@
             const urlParams = new URLSearchParams(window.location.search);
             calendarId = urlParams.get('id');
 
-            // Si no hay ID en la URL, creamos una sala de calendario nueva
             if (!calendarId) {
-                calendarId = 'cal_' + Math.random().toString(36).substr(2, 9);
+                calendarId = 'cal_principal_2026'; // ID fijo por defecto para que todos entren a la misma sala
                 const url = window.location.href.split('?')[0] + '?id=' + calendarId;
                 window.history.replaceState({}, '', url);
                 
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', calendarId);
-                await setDoc(docRef, { guards, names, notes, createdAt: Date.now() });
+                await setDoc(docRef, { guards, names, notes, createdAt: Date.now() }, { merge: true });
             }
 
-            // Escuchar cambios en vivo
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', calendarId);
             onSnapshot(docRef, (snap) => {
                 if (snap.exists()) {
@@ -366,14 +351,6 @@
             const val = document.getElementById('noteInput').value.trim();
             if (val) notes[activeNoteKey] = val; else delete notes[activeNoteKey];
             window.guardarEnNube(); window.cerrarNota();
-        };
-
-        window.copiarEnlaceBase = () => {
-            const url = window.location.href;
-            const tempInput = document.createElement("input"); tempInput.value = url;
-            document.body.appendChild(tempInput); tempInput.select(); document.execCommand("copy"); document.body.removeChild(tempInput);
-            const t = document.getElementById('toast'); t.innerText = "¡Enlace copiado!";
-            t.classList.remove('hidden'); setTimeout(() => t.classList.add('hidden'), 3500);
         };
 
         initServer();
