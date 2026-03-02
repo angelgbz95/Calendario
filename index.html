@@ -12,6 +12,9 @@
         .day-user2 { background-color: #10b981; color: white; border: 1px solid #059669; }
         .day-renegotiate { background-color: #fbbf24; color: #92400e; border: 1px solid #d97706; }
 
+        /* Estilos para días pasados */
+        .day-past { opacity: 0.4; cursor: not-allowed !important; }
+
         /* Estilos Modo Lectura */
         .modo-lectura .day-cell { cursor: default; }
         .modo-lectura .day-cell:hover { transform: none; }
@@ -75,7 +78,7 @@
                     </h1>
                     <div class="flex items-center gap-2 mt-1">
                         <div id="syncStatus" class="w-2 h-2 bg-slate-300 rounded-full animate-pulse transition-colors duration-300"></div>
-                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Iniciando... <span class="text-slate-300 ml-1 font-mono text-[10px]">v6.0 Auth Correo</span></p>
+                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Iniciando... <span class="text-slate-300 ml-1 font-mono text-[10px]">v7.0 Historial</span></p>
                     </div>
                 </div>
                 <div class="no-print flex flex-wrap gap-2">
@@ -328,7 +331,15 @@
             ["L", "M", "X", "J", "V", "S", "D"].forEach(d => {
                 const h = document.createElement('div'); h.className = "text-center font-bold text-slate-300 mb-1"; h.innerText = d; daysGrid.appendChild(h);
             });
-            const first = new Date(year, m, 1).getDay(); const offset = first === 0 ? 6 : first - 1; const daysInMonth = new Date(year, m + 1, 0).getDate();
+            
+            const first = new Date(year, m, 1).getDay(); 
+            const offset = first === 0 ? 6 : first - 1; 
+            const daysInMonth = new Date(year, m + 1, 0).getDate();
+            
+            // Obtener fecha actual sin horas para comparar
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
             for (let i = 0; i < offset; i++) daysGrid.appendChild(document.createElement('div'));
             
             for (let d = 1; d <= daysInMonth; d++) {
@@ -336,13 +347,19 @@
                 const dayEl = document.createElement('div');
                 dayEl.innerHTML = `<span class="relative z-10">${d}</span>`;
                 
-                aplicarEstilo(dayEl, guards[key] || 0);
+                // Lógica de fechas (Pasado y Presente)
+                const cellDate = new Date(year, m, d);
+                const isPast = cellDate < today;
+                const isToday = cellDate.getTime() === today.getTime();
+                
+                aplicarEstilo(dayEl, guards[key] || 0, isPast, isToday);
                 
                 dayEl.onclick = () => {
-                    if (isReadOnly) return;
+                    if (isReadOnly || isPast) return; // Si es solo lectura o un día pasado, no hace nada
+                    
                     guards[key] = ((guards[key] || 0) + 1) % 4;
                     if (guards[key] === 0) delete guards[key];
-                    aplicarEstilo(dayEl, guards[key] || 0);
+                    aplicarEstilo(dayEl, guards[key] || 0, isPast, isToday);
                     window.guardarEnNube();
                 };
                 daysGrid.appendChild(dayEl);
@@ -350,10 +367,26 @@
             card.appendChild(daysGrid); return card;
         }
 
-        function aplicarEstilo(el, status) {
-            el.className = "day-cell h-9 md:h-10 flex items-center justify-center rounded-lg font-bold ";
-            if (status === 1) el.classList.add('day-user1'); else if (status === 2) el.classList.add('day-user2');
-            else if (status === 3) el.classList.add('day-renegotiate'); else el.classList.add('day-empty');
+        function aplicarEstilo(el, status, isPast = false, isToday = false) {
+            let baseClasses = "day-cell h-9 md:h-10 flex items-center justify-center rounded-lg font-bold ";
+            
+            // Colores de estado
+            if (status === 1) baseClasses += 'day-user1 ';
+            else if (status === 2) baseClasses += 'day-user2 ';
+            else if (status === 3) baseClasses += 'day-renegotiate ';
+            else baseClasses += 'day-empty ';
+            
+            // Indicador de "Día Pasado"
+            if (isPast) {
+                baseClasses += 'day-past ';
+            }
+            
+            // Indicador de "Día de Hoy"
+            if (isToday) {
+                baseClasses += 'ring-2 ring-indigo-400 ring-inset ';
+            }
+
+            el.className = baseClasses;
         }
 
         function actualizarContadores() {
