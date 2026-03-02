@@ -151,14 +151,15 @@
         window.ingresarComoTecnico = async () => {
             try {
                 const provider = new GoogleAuthProvider();
-                // Al loguearse con Google, Firebase actualiza el usuario automáticamente
                 await signInWithPopup(auth, provider); 
             } catch (error) {
-                console.error(error);
+                console.error("Error completo de Auth:", error);
                 if (error.code === 'auth/popup-blocked') {
-                    alert("Tu navegador bloqueó la ventana de Google. Por favor, permite las ventanas emergentes (pop-ups) para esta página.");
+                    alert("Tu navegador bloqueó la ventana de Google. Por favor, permite las ventanas emergentes (pop-ups) para esta página en la barra de direcciones.");
+                } else if (error.code === 'auth/unauthorized-domain') {
+                    alert("⚠️ DOMINIO NO AUTORIZADO:\nDebes agregar 'angelgbz95.github.io' a la lista de dominios autorizados en Firebase Console (Authentication -> Configuración -> Dominios Autorizados).");
                 } else {
-                    alert("Asegúrate de haber habilitado 'Google' en la pestaña Authentication de Firebase Console.");
+                    alert("Error al iniciar sesión: " + error.message);
                 }
             }
         };
