@@ -66,8 +66,8 @@
                         📅 Planificación de Guardias 2026
                     </h1>
                     <div class="flex items-center gap-2 mt-1">
-                        <div id="syncStatus" class="w-2 h-2 bg-slate-300 rounded-full animate-pulse"></div>
-                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Iniciando... <span class="text-slate-300 ml-1 font-mono text-[10px]">v4.1 Sincronización</span></p>
+                        <div id="syncStatus" class="w-2 h-2 bg-slate-300 rounded-full animate-pulse transition-colors duration-300"></div>
+                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Iniciando... <span class="text-slate-300 ml-1 font-mono text-[10px]">v4.2 Corregido</span></p>
                     </div>
                 </div>
                 <div class="no-print flex flex-wrap gap-2">
@@ -136,14 +136,13 @@
 
         // Variables Globales
         let db, auth, user;
-        const appId = 'calendarioguardias-333b7';
         const calendarId = 'cal_principal_2026';
         
         let guards = {}; let notes = {}; let names = { n1: "ANGEL GASPAR BENITEZ", n2: "MAXIMILIANO AGUIRRE" };
         const year = 2026;
         let isReadOnly = true; 
         let activeNoteKey = null;
-        let isSubscribed = false; // Bandera para evitar suscripciones múltiples
+        let isSubscribed = false; 
 
         // INICIALIZACIÓN PRINCIPAL
         try {
@@ -157,16 +156,12 @@
 
                 if (user) {
                     if (!user.isAnonymous) {
-                        // Técnico logueado
                         document.getElementById('roleModal').classList.add('hidden');
                         document.getElementById('roleModal').classList.remove('flex');
                         isReadOnly = false;
                         configurarInterfaz();
                         iniciarSincronizacion();
                     } else {
-                        // Coordinador logueado (Anónimo)
-                        // Si ya estábamos mostrando el modal, asumimos que acaba de hacer clic.
-                        // Si no, recargamos la interfaz como coordinador por defecto.
                          if (document.getElementById('roleModal').classList.contains('hidden')) {
                              isReadOnly = true;
                              configurarInterfaz();
@@ -201,7 +196,6 @@
                 if (!auth.currentUser) {
                     await signInAnonymously(auth);
                 }
-                // El estado cambiará en onAuthStateChanged, pero forzamos la vista por si acaso
                 isReadOnly = true;
                 configurarInterfaz();
                 iniciarSincronizacion();
@@ -244,27 +238,25 @@
             }
             
             document.getElementById('calendarGrid').classList.remove('opacity-50', 'pointer-events-none');
-            // Render inicial (vacío) antes de que lleguen los datos
             if (document.getElementById('calendarGrid').innerHTML === '') {
                  renderizarCalendario();
             }
         }
 
         async function iniciarSincronizacion() {
-            if (isSubscribed || !user) return; // Prevenir múltiples llamadas
+            if (isSubscribed || !user) return;
             
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', calendarId);
+            // RUTA CORREGIDA: Apunta a una colección simple y directa
+            const docRef = doc(db, 'calendarios', calendarId);
             
-            // Si es técnico, nos aseguramos de que el documento base exista
             if (!isReadOnly) {
                 try {
                     await setDoc(docRef, { createdAt: Date.now() }, { merge: true });
                 } catch (e) {
-                    console.log("No se pudo confirmar doc inicial, continuando...");
+                    console.log("Creación inicial evitada por seguridad, continuando...");
                 }
             }
 
-            // Suscribirse a los cambios EN VIVO (Para ambos roles)
             isSubscribed = true;
             onSnapshot(docRef, (snap) => {
                 if (snap.exists()) {
@@ -275,25 +267,35 @@
                     document.getElementById('name1').value = names.n1;
                     document.getElementById('name2').value = names.n2;
                     renderizarCalendario();
-                } else {
-                    console.log("Esperando datos iniciales del técnico...");
                 }
             }, (error) => {
                 console.error("Error de sincronización en vivo:", error);
-                isSubscribed = false; // Permitir reintento si falla
+                isSubscribed = false; 
             });
         }
 
         window.guardarEnNube = async () => {
             if (isReadOnly || !user) return;
+            
+            // Cambiar indicador a amarillo (guardando)
+            const syncDot = document.getElementById('syncStatus');
+            syncDot.classList.replace('bg-indigo-500', 'bg-amber-400');
+            
             names.n1 = document.getElementById('name1').value;
             names.n2 = document.getElementById('name2').value;
             
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', calendarId);
+            // RUTA CORREGIDA
+            const docRef = doc(db, 'calendarios', calendarId);
             try {
                 await setDoc(docRef, { guards, names, notes, lastUpdate: Date.now() }, { merge: true });
                 actualizarContadores();
-            } catch (e) { console.error("Error guardando", e); }
+                // Volver a azul (guardado con éxito)
+                setTimeout(() => syncDot.classList.replace('bg-amber-400', 'bg-indigo-500'), 300);
+            } catch (e) { 
+                console.error("Error guardando", e);
+                alert("Error al guardar en la nube. Verifica tu conexión.");
+                syncDot.classList.replace('bg-amber-400', 'bg-red-500');
+            }
         };
 
         // RENDERIZADO DEL CALENDARIO
