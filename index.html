@@ -27,14 +27,6 @@
 </head>
 <body class="bg-slate-100 min-h-screen p-2 md:p-8 font-sans text-slate-900">
 
-    <!-- Modal de Configuración (Solo si falta Firebase) -->
-    <div id="setupModal" class="fixed inset-0 bg-slate-900/95 z-[200] hidden items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl">
-            <h2 class="text-2xl font-bold text-rose-600 mb-4">⚠️ Falta conectar la Base de Datos</h2>
-            <p class="text-slate-600 mb-4">Para que el calendario funcione en tiempo real en tu GitHub, debes agregar tus credenciales de Firebase en el código.</p>
-        </div>
-    </div>
-
     <!-- Modal de Selección de Rol -->
     <div id="roleModal" class="fixed inset-0 bg-slate-900/90 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl transition-all" id="roleContainer">
@@ -68,7 +60,7 @@
                     </h1>
                     <div class="flex items-center gap-2 mt-1">
                         <div id="syncStatus" class="w-2 h-2 bg-slate-300 rounded-full animate-pulse"></div>
-                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Conectando al servidor... <span class="text-slate-300 ml-1 font-mono text-[10px]">v2.1</span></p>
+                        <p id="modoTexto" class="text-slate-500 italic text-xs md:text-sm">Conectando al servidor... <span class="text-slate-300 ml-1 font-mono text-[10px]">v3.0</span></p>
                     </div>
                 </div>
                 <div class="no-print flex flex-wrap gap-2">
@@ -118,19 +110,16 @@
         <div id="toast" class="fixed bottom-5 right-5 hidden bg-slate-800 text-white px-6 py-3 rounded-xl shadow-2xl z-50"></div>
     </div>
 
-    <!-- LOGICA DE SERVIDOR Y APLICACIÓN -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // =========================================================================
-        // 🛠️ CONFIGURACIÓN EXACTA DE TU FIREBASE
+        // 🛠️ HE COPIADO TU CLAVE EXACTA DE TU IMAGEN. NO TIENES QUE TOCAR NADA.
         // =========================================================================
         const firebaseConfig = {
-            // 👇 ¡ATENCIÓN! Reemplaza el texto de la línea de abajo con tu apiKey real copiada de Firebase 👇
             apiKey: "AIzaSyCz6SMcNXIwRDL7PJPR2RukofIBaavN0Ck",
-            
             authDomain: "calendarioguardias-333b7.firebaseapp.com",
             projectId: "calendarioguardias-333b7",
             storageBucket: "calendarioguardias-333b7.firebasestorage.app",
@@ -149,13 +138,14 @@
         // --- Funciones de Interfaz y Auth ---
         window.ingresarComoTecnico = async () => {
             try {
+                // Cambiamos la ventana emergente que se bloqueaba por REDIRECCIÓN directa.
+                document.getElementById('roleContainer').innerHTML = '<div class="loader mb-4"></div><p class="text-slate-600 font-bold">Conectando con Google de forma segura...</p>';
                 const provider = new GoogleAuthProvider();
-                provider.setCustomParameters({ prompt: 'select_account' }); // Obliga a elegir cuenta
-                await signInWithPopup(auth, provider); 
+                await signInWithRedirect(auth, provider); 
             } catch (error) {
-                console.error("Error completo de Auth:", error);
-                // Alerta nativa que muestra el código exacto de fallo
-                alert(`⚠️ Error al Iniciar Sesión:\n\nCódigo: ${error.code}\n\nSi el código dice 'auth/api-key-not-valid', revisa que hayas pegado bien el apiKey en el código.\nSi dice 'auth/unauthorized-domain', agrega 'angelgbz95.github.io' en Dominios Autorizados de Firebase.\nSi dice 'auth/popup-blocked', permite las ventanas emergentes en tu navegador.`);
+                console.error(error);
+                alert(`Error al redirigir: ${error.message}`);
+                window.location.reload();
             }
         };
 
@@ -193,7 +183,7 @@
                 document.getElementById('btnGuardarNota').classList.remove('hidden');
                 document.getElementById('noteInput').readOnly = false;
                 
-                const nombreTecnico = auth.currentUser.displayName || "Técnico";
+                const nombreTecnico = auth.currentUser ? (auth.currentUser.displayName || "Técnico") : "Técnico";
                 document.getElementById('modoTexto').innerText = `Modo Edición Activo (${nombreTecnico})`;
                 document.getElementById('modoTexto').classList.add('text-indigo-600', 'font-bold');
                 document.getElementById('syncStatus').classList.replace('bg-slate-300', 'bg-indigo-500');
@@ -209,14 +199,15 @@
             let configToUse = isLocalCanvas ? JSON.parse(__firebase_config) : MI_FIREBASE_CONFIG;
             appId = isLocalCanvas && typeof __app_id !== 'undefined' ? __app_id : 'calendarioguardias-333b7';
 
-            if (!isLocalCanvas && configToUse.apiKey === "TU_API_KEY") {
-                document.getElementById('setupModal').classList.remove('hidden');
-                return;
-            }
-
             const app = initializeApp(configToUse);
             db = getFirestore(app);
             auth = getAuth(app);
+
+            // Verificar si venimos de una redirección exitosa de Google
+            getRedirectResult(auth).catch((error) => {
+                console.error("Error en la redirección:", error);
+                alert("Hubo un fallo al volver de Google. Mensaje: " + error.message);
+            });
 
             if (isLocalCanvas && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                 await signInWithCustomToken(auth, __initial_auth_token);
@@ -228,6 +219,7 @@
                 user = u;
                 if (user) {
                     if (!user.isAnonymous) {
+                        // ¡Login exitoso con Google!
                         document.getElementById('roleModal').classList.add('hidden');
                         isReadOnly = false;
                         configurarInterfaz();
@@ -244,7 +236,7 @@
             calendarId = urlParams.get('id');
 
             if (!calendarId) {
-                calendarId = 'cal_principal_2026'; // ID fijo por defecto para que todos entren a la misma sala
+                calendarId = 'cal_principal_2026'; // ID fijo por defecto para la sala
                 const url = window.location.href.split('?')[0] + '?id=' + calendarId;
                 window.history.replaceState({}, '', url);
                 
