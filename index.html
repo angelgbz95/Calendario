@@ -345,8 +345,8 @@
                 // Lógica de fechas (Pasado y Presente)
                 const cellDate = new Date(year, m, d);
                 
-                // Todos los días habilitados (sin bloqueo por fecha pasada)
-                const isPast = false; 
+                // Vuelve a calcular si el día ya pasó para inhabilitarlo
+                const isPast = cellDate < today; 
                 
                 const isToday = cellDate.getTime() === today.getTime();
                 
@@ -382,9 +382,9 @@
                 baseClasses += 'day-past ';
             }
             
-            // Indicador de "Día de Hoy"
+            // Indicador de "Día de Hoy" (Borde dorado llamativo)
             if (isToday) {
-                baseClasses += 'ring-2 ring-indigo-400 ring-inset ';
+                baseClasses += 'ring-4 ring-amber-400 ring-inset z-20 ';
             }
 
             el.className = baseClasses;
